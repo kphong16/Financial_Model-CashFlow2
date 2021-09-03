@@ -5,3 +5,4 @@ from .genfunc import *
 from .index import *
 from .account import *
 from .loan import *
+from .management import *
