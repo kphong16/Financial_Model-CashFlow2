@@ -67,6 +67,9 @@ class Loan(object):
         # note 입력
         self.note = note
         
+        # is withdrawable
+        self._is_wtdrbl = False
+        
         # Account Setting
         self.ntnl = Account(self.cindex, self.title, self.tag)
         self.fee = Account(self.cindex, self.title, self.tag)
@@ -101,6 +104,31 @@ class Loan(object):
     @property
     def df(self):
         return self.dctmrg.df
+    
+    #### set loan withdrawable ####
+    @property
+    def is_wtdrbl(self):
+        return self._is_wtdrbl
+    @is_wtdrbl.setter
+    def is_wtdrbl(self, value):
+        self._is_wtdrbl = value
+    
+    def set_wtdrbl_intldate(self, date):
+        """If the date is an initial date, then set is_wtdrbl True"""
+        if date == self.idxfn[0]:
+            self.is_wtdrbl = True
+    
+    def setback_wtdrbl_mtrt(self, date):
+        """If the date is a maturity date, then set back is_wtdrbl False"""
+        if date == self.idxfn[-1]:
+            self.set_wtdrbl_false()
+            
+    def set_wtdrbl_false(self):
+        """Set is_wtdrbl False"""
+        self.is_wtdrbl = False
+    #### set loan withdrawable ####
+    
+    
     #####################################################
     # fee 입금 함수, IR 입금 함수, ntnl 출금, 입금 함수 추가 필요 #
         
