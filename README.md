@@ -18,4 +18,4 @@ Index, Account와 Loan 모듈을 사용하면 재무기획자 입장에서 검�
 
 ### Example
 Financial_Model_CashFlow1의 경우 개발 후 운영사업의 사례를 적용하였으며,
-본건의 경우 개발 및 분야 사업의 사례르 적용하였습니다.
+본건 CashFlow2의 경우 개발 및 분양 사업의 사례를 적용하여 예시르 작성하였습니다.
