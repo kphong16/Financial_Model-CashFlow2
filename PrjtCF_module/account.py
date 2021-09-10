@@ -16,6 +16,39 @@ from .index import Index, PrjtIndex
 __all__ = ['Account', 'Merge']
 
 class Account(object):
+    """
+    PARAMETERS
+    - index : Index class
+    - title : string
+    - tag : tuple of str
+    - balstrt : default 0, amount which the balance starts
+    - note : str
+    ATTRIBUTES
+    - df : Dataframe of data summary
+    - _df : Dataframe of all data
+    - add_scdd : get value of "add_scdd" column
+      ex) Account.add_scdd[idx[0]]
+    - add_scdd_cum : get value of "add_scdd_cum" column
+    - sub_scdd : get value of "sub_scdd" column
+    - sub_scdd_cum : get value of "sub_scdd_cum" column
+    - bal_strt : get value of "bal_strt" column
+    - amt_add : get value of "amt_add" column
+    - amt_add_cum : get value of "amt_add_cum" column
+    - amt_sub : get value of "amt_sub" column
+    - amt_sub_cum : get value of "amt_sub_cum" column
+    - bal_end : get value of "bal_end" column
+    - add_rsdl_cum : get value of "add_rsdl_cum" column
+    - sub_rsdl_cum : get value of "sub_rsdl_cum" column
+    METHODS
+    - send(index, amt, account) : Transfer amount to "account" account
+    - addscdd(index, amt) : Input amt data on "add_scdd" column.
+      ex) Account.addscdd(idx[0], 10_000)
+      ex) Account.addscdd(idx[[1, 2]], [10_000, 20_000])
+    - subscdd(index, amt) : Input amt data on "sub_scdd" column.
+    - addamt(index, amt) : Input amt data on "amt_add" column.
+    - subamt(index, amt): Input amt data on "amt_sub" column.
+    - iptamt(index, amt) : Input amt data on "amt_add" or "amt_sub" column.
+    """
     def __init__(self,
                  index = None, # Index class
                  title = None, # string : "ProductA"
@@ -55,9 +88,9 @@ class Account(object):
 
     def _intlz(self):
         # 초기화 함수 실행
-        self.setdf()
-        self.setjnl()
-        self.set_outputfunc()
+        self._setdf()
+        self._setjnl()
+        self._set_outputfunc()
     
     #### INITIAL SETTING FUNCTION #### 초기화 함수
     DFCOL = ['add_scdd', 'add_scdd_cum', 'sub_scdd', 'sub_scdd_cum',
@@ -67,7 +100,7 @@ class Account(object):
     DFCOL_smry = ['add_scdd', 'sub_scdd', 
                   'bal_strt', 'amt_add', 'amt_sub', 'bal_end']
     JNLCOL = ['amt_add', 'amt_sub', 'note']
-    def setdf(self):
+    def _setdf(self):
         # DataFrame 초기화
         self._df = pd.DataFrame(np.zeros([len(self.index), len(self.DFCOL)]),
                                columns = self.DFCOL, 
@@ -77,7 +110,7 @@ class Account(object):
         # balance 계산 실행
         self._cal_bal()
         
-    def setjnl(self):
+    def _setjnl(self):
         # Journal(분개장) 초기화
         self.jnl = pd.DataFrame(columns = self.JNLCOL)
     #### INITIAL SETTING FUNCTION ####
@@ -142,6 +175,9 @@ class Account(object):
         
     @listwrapper
     def addamt(self, index, amt):
+        if amt == 0:
+            return
+            
         # 분개장(journal)에 데이터 입력
         tmpjnl = pd.DataFrame([[amt, 0, "add_amt"]], \
                               columns=self.JNLCOL, index=[index])
@@ -155,6 +191,9 @@ class Account(object):
         
     @listwrapper
     def subamt(self, index, amt):
+        if amt == 0:
+            return
+            
         # 분개장(journal)에 데이터 입력
         tmpjnl = pd.DataFrame([[0, amt, "sub_amt"]], \
                               columns=self.JNLCOL, index=[index])
@@ -168,8 +207,11 @@ class Account(object):
         
     @listwrapper
     def iptamt(self, index, amt):
+        if amt == 0:
+            return
+        
         # amt가 양수인 경우 addamt 실행, 음수인 경우 subamt 실행
-        if amt >= 0:
+        if amt > 0:
             self.addamt(index, amt)
         else:
             self.subamt(index, -amt)
@@ -178,7 +220,7 @@ class Account(object):
 
     #### OUTPUT DATA ####
     
-    def set_outputfunc(self):
+    def _set_outputfunc(self):
         """
         Column명을 기준으로 데이터프레임에서 요구되는 값을 찾아서 반환
         """
@@ -274,11 +316,36 @@ class Account(object):
 
 
 class Merge(object):
+    """
+    PARAMETERS
+    - dct : Account dictionary. ex) {"nameA":A, "nameB":B, ...}
+    ATTRIBUTES
+    - df : Dataframe of data summary
+    - _df : Dataframe of all data
+    - add_scdd : get value of "add_scdd" column
+      ex) Account.add_scdd[idx[0]]
+    - add_scdd_cum : get value of "add_scdd_cum" column
+    - sub_scdd : get value of "sub_scdd" column
+    - sub_scdd_cum : get value of "sub_scdd_cum" column
+    - bal_strt : get value of "bal_strt" column
+    - amt_add : get value of "amt_add" column
+    - amt_add_cum : get value of "amt_add_cum" column
+    - amt_sub : get value of "amt_sub" column
+    - amt_sub_cum : get value of "amt_sub_cum" column
+    - bal_end : get value of "bal_end" column
+    - add_rsdl_cum : get value of "add_rsdl_cum" column
+    - sub_rsdl_cum : get value of "sub_rsdl_cum" column
+    METHODS
+    - dfcol(col, col_criteria=False) : Return a dataframe sorted by column name.
+      + col : str(col name) or list of str(col name)
+    - title() : Gather title data on each instances of dictionary
+    - tag() : Gather tag data on each instances of dictionary
+    - note() : Gather note data on each instances of dictionary 
+    """
     def __init__(self, dct:dict):
-        # dictionary : {"nameA":A, "nameB":B, ...}
         self.dct = dct
-        self.set_idxmain()
-        self.set_outputfunc()
+        self._set_idxmain()
+        self._set_outputfunc()
     
     def __getitem__(self, dct_key):
         return self.dct[dct_key]
@@ -286,13 +353,13 @@ class Merge(object):
     @property
     def _df(self):
         # merge 완료된 dataframe 출력
-        tmp_dct = sum([self.adjust_idx(self.dct[x]._df) for x in self.dct])
+        tmp_dct = sum([self._adjust_idx(self.dct[x]._df) for x in self.dct])
         return tmp_dct
         
     @property
     def df(self):
         # merge 완료된 dataframe을 요약하여 출력
-        tmp_dct = sum([self.adjust_idx(self.dct[x].df) for x in self.dct])
+        tmp_dct = sum([self._adjust_idx(self.dct[x].df) for x in self.dct])
         return tmp_dct
     
     def dfcol(self, col, col_criteria=False):
@@ -316,7 +383,7 @@ class Merge(object):
     ##################################
     #### OUTPUT DATA ####
     
-    def set_outputfunc(self):
+    def _set_outputfunc(self):
         """
         Column명을 기준으로 데이터프레임에서 요구되는 값을 찾아서 반환
         """
@@ -416,7 +483,7 @@ class Merge(object):
     
     #### 작성 중 ####
     # 기준 index 설정
-    def set_idxmain(self):
+    def _set_idxmain(self):
         idx_len = 0
         self.idx_main = None
         for x in self.dct:
@@ -426,13 +493,14 @@ class Merge(object):
                 self.idx_main = tmpidx
     
     # index 조정
-    def adjust_idx(self, tmpdf):
+    def _adjust_idx(self, tmpdf):
         if len(tmpdf.index) < len(self.idx_main):
             return DataFrame(tmpdf, index=self.idx_main).fillna(0)
         return tmpdf
-    #### 작성 중 ####        
+    #### 작성 중 ####
         
 
+"""
 class _idxsrch:
     def __init__(self) -> None:
         self._name = None
@@ -442,6 +510,6 @@ class _idxsrch:
         
     def __set__(self, instance, value):
         instance.__dict__[self._name] = value
-        
+"""     
         
     

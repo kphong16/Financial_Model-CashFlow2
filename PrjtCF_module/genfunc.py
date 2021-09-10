@@ -15,4 +15,12 @@ def is_iterable(data):
     except TypeError:
         return False
         
-        
+
+def limited(val, lmt):
+    tmp_val = val
+    if is_iterable(lmt):
+        for val_lmt in lmt:
+            tmp_val = min(tmp_val, val_lmt)
+    else:
+        tmp_val = min(tmp_val, lmt)
+    return tmp_val

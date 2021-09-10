@@ -13,6 +13,33 @@ from . import genfunc
 __all__ = ['Index', 'PrjtIndex', 'booleanloc']
 
 class Index(object):
+    """
+    PARAMETERS
+    - start: day, ex) '2021-01', '2021-01-01'
+    - end: day, ex) '2021-01', '2021-01-01'
+    - periods: int, ex) 12 <- for twelve months
+    - freq: str, ex) 'M' <- for last date of month
+      + 'D' : Day
+      + 'B' : Business Day
+      + 'M' : MonthEnd
+      + 'BM' : Business MonthEnd
+      + 'MS' : MonthBegin
+      + 'BMS' : Business MonthBegin
+      + 'WOM-1MON', 'WOM-2MON', ... : Week of Month(1st monday of every month)
+    ATTRIBUTES
+    - _range : DatetimeIndex of data
+    - _idxno : Index numbering
+    - index : date of DatetimeIndex
+    - year : year array of DatetimeIndex
+    - month : month array of DatetimeIndex
+    - day : day array of DatetimeIndex
+    - idxno : Index numbering
+    METHODS
+    - __getitem__(no) : use like Index[no], return Index.index[no]
+    - __len__() : use like len(Index), return len(index)
+    - idxloc(year=None, month=None, day=None) :
+      + Return boolean array of data(year, month, day) which is in array
+    """
     def __init__(self,
                 start: Day = None,
                 end: Day = None,
@@ -65,6 +92,29 @@ class Index(object):
 
 
 class PrjtIndex(object):
+    """
+    PARAMETERS
+    - idxname : list of string, ex) ['prjt', 'cstrn', 'loan', 'sales']
+    - start : list of date, ex) ['2021-08', '2021-10', '2021-10', '2021-11']
+    - end : list of date
+    - periods : list of integer, ex) [24+1, 18+1, 20+1, 16+1]
+    - freq : string, frequency of data, ex) 'M'
+    - prjtno : int, default 0
+      + set main, project index
+      + If is is 0 then idxname[0], i.e. 'prjt' index become main and project idx
+    ATTRIBUTES
+    - index : date of DatetimeIndex on project index
+    - year : year array of DatetimeIndex on project index
+    - month : month array of DatetimeIndex on project index
+    - day : day array of DatetimeIndex on project index
+    - idxno : Index numbering on project index
+    METHODS
+    - __getitem__(no) : use like Index[no], return index[no] of project index
+    - __len__() : use like len(Index), return len of project index
+    - idxloc(year=None, month=None, day=None) :
+      + Return boolean array of data(year, month, day) which is in array
+      + Data of project index
+    """
     def __init__(self, 
                  idxname,
                  start = None, 
@@ -86,10 +136,13 @@ class PrjtIndex(object):
     def _intlz(self):
         self._setidxcls()
         self._prjt = getattr(self, self.idxname[self._prjtno])
+        # Set project idx to PrjtIndex._prjt
     
     def _setidxcls(self):
+        """Set each index of idxname list.
+        Set attributes with each idxname, for Index instance of each idxname
+        """
         for no, name in enumerate(self.idxname):
-            
             tmpidx = Index(self._isnone(self.start, no), 
                            self._isnone(self.end, no), 
                            self._isnone(self.periods, no),
@@ -97,6 +150,9 @@ class PrjtIndex(object):
             setattr(self, name, tmpidx)
     
     def _isnone(self, val, no):
+        """If val is None, return None.
+        If val has a data excepting None, return val[no]
+        """
         if val:
             return val[no]
         else:

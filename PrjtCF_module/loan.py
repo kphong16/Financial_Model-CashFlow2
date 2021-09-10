@@ -18,10 +18,37 @@ from .account import Account, Merge
 __all__ = ['Loan']
 
 class Loan(object):
+    """
+    PARAMETERS
+    - index : basic index class
+    - idxfn : financial index class
+    - amt_ntnl : notional amount, float
+    - rate_fee : initial fee rate, float
+    - rate_IR : interest rate, float
+    - IRcycle : interest payment cycle(months), int
+    - title : name of loan, str
+    - tag : tags of loan, tuple of str
+    - note : note, str
+    ATTRIBUTES
+    - cindex / cidxfn : index class instance
+    - index / idxfn : index data of index class instance
+    - is_wtdrbl : boolean(True or False), whether it's withdrawable or not.
+                  default false
+    - ntnl : Account instance of notional amount
+    - fee : Account instance of fee amount
+    - IR : Account instance of IR amount
+    - dctmrg : Merge of dictionary ntnl, fee, IR.
+    - _df : _df of dctmrg
+    - df : df of dctmrg
+    METHODS
+    - set_wtdrbl_intldate(date) : If the date is an initial date, then set is_wtdrbl True
+    - setback_wtdrbl_mtrt(date) : If the date is a maturity date, then set back is_wtdrbl False
+    - set_wtdrbl_false() : set is_wtdrbl False
+    """
     def __init__(self,
                  index = None, # basic index class
                  idxfn = None, # financial index class
-                 amt_ntnl = None, # float
+                 amt_ntnl = 0, # float
                  rate_fee = 0.0, # float
                  rate_IR = 0.0, # float
                  IRcycle = 1, # int, months
@@ -49,7 +76,8 @@ class Loan(object):
         self.amt_ntnl = amt_ntnl
         self.rate_fee = rate_fee
         self.IRcycle = IRcycle
-        self.rate_IR = rate_IR * self.IRcycle / 12
+        self.rate_IR = rate_IR
+        self._rate_IR_cycle = rate_IR * self.IRcycle / 12
             
         # title 입력
         self.title = title
@@ -93,8 +121,9 @@ class Loan(object):
         self.dct['fee'] = self.fee
         
         self.IR.rate = self.rate_IR
-        self.IR.amt = self.ntnl.amt * self.IR.rate
-        self.IR.addscdd(self.cidxfn.index[1:], np.ones(len(self.cidxfn)) * self.IR.amt)
+        self.IR._rate_cycle = self._rate_IR_cycle
+        self.IR.amt_cycle = self.ntnl.amt * self.IR._rate_cycle
+        self.IR.addscdd(self.cidxfn.index[1:], np.ones(len(self.cidxfn)) * self.IR.amt_cycle)
         self.dct['IR'] = self.IR
         
     @property
@@ -131,4 +160,23 @@ class Loan(object):
     
     #####################################################
     # fee 입금 함수, IR 입금 함수, ntnl 출금, 입금 함수 추가 필요 #
+
+
+class Merge_loan(Merge):
+    @property
+    def ntnl(self):
+        tmp_dct = {key:val.ntnl for key, val in self.dct.items()}
+        rslt_acc = Merge(tmp_dct)
+        return = rslt_acc
+    
+    @property
+    def fee(self):
+        tmp_dct = {key:val.fee for key, val in self.dct.items()}
+        rslt_acc = Merge(tmp_dct)
+        return rslt_acc
         
+    @property
+    def IR(self):
+        tmp_dct = {key:val.IR for key, val in self.dct.items()}
+        rslt_acc = Merge(tmp_dct)
+        return rslt_acc
