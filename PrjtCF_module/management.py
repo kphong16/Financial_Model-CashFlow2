@@ -141,7 +141,7 @@ class cst_mngmnt:
             setattr(self, "fee_"+key, fee_scdd)
             ttlfee += fee_scdd
             
-            IR_scdd = -val.ntnl.bal_strt[self.idxno] * val.IR.rate
+            IR_scdd = -val.ntnl.bal_strt[self.idxno] * val.IR.rate_cycle
             setattr(self, "IR_"+key, IR_scdd)
             ttlIR += IR_scdd
         self.cst_fnclfee = ttlfee
@@ -188,8 +188,9 @@ class repay_mngmnt:
     @property
     def amt_rpy_exptd(self):
         """상환 예정된 기일(만기 등)의 상환 예정 금액"""
-        exptd_rpy_cum = max(self.loan.ntnl.add_rsdl_cum[self.idxno], 0)
-        rpy_amt = min(exptd_rpy_cum, self.ntnl_bal_end)
+        rpy_amt = limited(self.loan.ntnl.add_rsdl_cum[self.idxno],
+                          upper=[self.ntnl_bal_end],
+                          lower=[0])
         return rpy_amt
         
     @property
@@ -199,11 +200,31 @@ class repay_mngmnt:
         
     # Transfer repayment amount to repayment account
     def trsf_rpy(self, oprtg, rpyacc):
-        amt_rpy = limited(self.amt_rpy_exptd, [oprtg.bal_end[self.idxno]])
+        amt_rpy = limited(self.amt_rpy_exptd, 
+                          upper=[oprtg.bal_end[self.idxno]],
+                          lower=[0])
         oprtg.send(self.idxno, amt_rpy, rpyacc)
+    
+    # Transfer repayment amount from repayment account to operating account
+    def trsf_oprtg(self, rpyacc, oprtg, is_repaid=False):
+        if not is_repaid:
+            amt_trsfr = limited(rpyacc.bal_end[self.idxno],
+                                upper=[self.loan.ntnl.sub_rsdl_cum[self.idxno]],
+                                lower=[0])
+            rpyacc.send(self.idxno, amt_trsfr, oprtg)
+            self.loan.ntnl.subscdd(self.idxno, -amt_trsfr)
+        elif is_repaid:
+            amt_trsfr = limited(rpyacc.bal_end[self.idxno],
+                                lower=[0])
+            rpyacc.send(self.idxno, amt_trsfr, oprtg)
     
     # Repay loan from repayment account
     def rpy_ntnl(self, rpyacc):
-        amt_rpy = limited(rpyacc.bal_end[self.idxno], [self.ntnl_bal_end])
+        amt_rpy = limited(rpyacc.bal_end[self.idxno], upper=[self.ntnl_bal_end])
         rpyacc.send(self.idxno, amt_rpy, self.loan.ntnl)
+        
+    # Check loan repaid and set
+    def check_repaid(self):
+        self.loan.set_repaid(self.idxno)
+        return self.loan.is_repaid
         

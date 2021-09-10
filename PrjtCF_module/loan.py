@@ -34,6 +34,8 @@ class Loan(object):
     - index / idxfn : index data of index class instance
     - is_wtdrbl : boolean(True or False), whether it's withdrawable or not.
                   default false
+    - is_repaid : boolean(True or False), whether it's repaid or not.
+                  default false
     - ntnl : Account instance of notional amount
     - fee : Account instance of fee amount
     - IR : Account instance of IR amount
@@ -44,6 +46,7 @@ class Loan(object):
     - set_wtdrbl_intldate(date) : If the date is an initial date, then set is_wtdrbl True
     - setback_wtdrbl_mtrt(date) : If the date is a maturity date, then set back is_wtdrbl False
     - set_wtdrbl_false() : set is_wtdrbl False
+    - set_repaid() : After check that notional amount is repaid, set is_repaid True.
     """
     def __init__(self,
                  index = None, # basic index class
@@ -95,8 +98,9 @@ class Loan(object):
         # note 입력
         self.note = note
         
-        # is withdrawable
+        # is withdrawable, repaid
         self._is_wtdrbl = False
+        self._is_repaid = False
         
         # Account Setting
         self.ntnl = Account(self.cindex, self.title, self.tag)
@@ -121,8 +125,8 @@ class Loan(object):
         self.dct['fee'] = self.fee
         
         self.IR.rate = self.rate_IR
-        self.IR._rate_cycle = self._rate_IR_cycle
-        self.IR.amt_cycle = self.ntnl.amt * self.IR._rate_cycle
+        self.IR.rate_cycle = self._rate_IR_cycle
+        self.IR.amt_cycle = self.ntnl.amt * self.IR.rate_cycle
         self.IR.addscdd(self.cidxfn.index[1:], np.ones(len(self.cidxfn)) * self.IR.amt_cycle)
         self.dct['IR'] = self.IR
         
@@ -133,6 +137,7 @@ class Loan(object):
     @property
     def df(self):
         return self.dctmrg.df
+    
     
     #### set loan withdrawable ####
     @property
@@ -158,6 +163,24 @@ class Loan(object):
     #### set loan withdrawable ####
     
     
+    #### set loan repaid all ####
+    @property
+    def is_repaid(self):
+        return self._is_repaid
+    @is_repaid.setter
+    def is_repaid(self, value):
+        self._is_repaid = value
+        
+    def set_repaid(self, date):
+        if self.is_wtdrbl == False:
+            return
+        if self.ntnl.bal_end[date] < 0:
+            return
+        if self.ntnl.sub_rsdl_cum[date] > 0:
+            return
+        self.is_repaid = True
+    #### set loan repaid all ####
+    
     #####################################################
     # fee 입금 함수, IR 입금 함수, ntnl 출금, 입금 함수 추가 필요 #
 
@@ -167,7 +190,7 @@ class Merge_loan(Merge):
     def ntnl(self):
         tmp_dct = {key:val.ntnl for key, val in self.dct.items()}
         rslt_acc = Merge(tmp_dct)
-        return = rslt_acc
+        return rslt_acc
     
     @property
     def fee(self):

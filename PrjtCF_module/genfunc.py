@@ -16,11 +16,20 @@ def is_iterable(data):
         return False
         
 
-def limited(val, lmt):
+def limited(val, upper=None, lower=None):
     tmp_val = val
-    if is_iterable(lmt):
-        for val_lmt in lmt:
-            tmp_val = min(tmp_val, val_lmt)
-    else:
-        tmp_val = min(tmp_val, lmt)
+    
+    if upper:
+        if is_iterable(upper):
+            for val_lmt in upper:
+                tmp_val = min(tmp_val, val_lmt)
+        else:
+            tmp_val = min(tmp_val, upper)
+    
+    if lower:
+        if is_iterable(lower):
+            for val_lmt in lower:
+                tmp_val = max(tmp_val, val_lmt)
+        else:
+            tmp_val = max(tmp_val, lower)
     return tmp_val
