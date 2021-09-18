@@ -4,9 +4,127 @@ from pandas import Series, DataFrame
 from pandas.tseries.offsets import Day, MonthEnd
 
 from .genfunc import *
+from .index import *
+from .account import *
+
+__all__ = ['Intlz_sales_sellinlots', 'Intlz_cost', 
+           'Mngmnt_sls', 'Mngmnt_wtdrw', 'Mngmnt_cst', 'Mngmnt_repay']
+
+
+class Intlz_sales_sellinlots:
+    """
+    schedule array sample
+    [[0, 0.1],
+     [4, 0.3],
+     [8, 0.3],
+     [12, 0.3]]
+    """
+    def __init__(self,
+                 index, # basic index class
+                 idxsls = None, # financial index class
+                 title = [], # list, sales name
+                 amt = [], # list/int, total sales amount
+                 csh_scdd = [], # list/ cash schedule array
+                 ctrt_scdd = [], # list/ contract schedule array
+                 ):
+        # index 입력
+        self.index = index
+        if idxsls == None:
+            idxsls = index
+        self.idxsls = idxsls
+            
+        # 주요 변수 입력
+        self.title = title
+        self.len = len(title)
+        self.amt = amt
+        self.csh_scdd = csh_scdd
+        self.ctrt_scdd = ctrt_scdd
+        
+        self.dct = {}
+        self._intlz()
+        
+    def __len__(self):
+        return self.len
+    
+    def _intlz(self):
+        for i, key in enumerate(self.title):
+            tmp_acc = Account(self.index)
+            self.dct[key] = tmp_acc
+            setattr(self, key, tmp_acc)
+            
+            tmp_title = getattr(self, key)
+            tmp_amt = self.amt[i]
+            setattr(tmp_title, 'amt', tmp_amt)
+            
+            tmp_csh_idx = self.idxsls[[x[0] for x in self.csh_scdd[i]]]
+            setattr(tmp_title, 'csh_idx', tmp_csh_idx)
+            
+            tmp_csh_rate = Series([x[1] for x in self.csh_scdd[i]],
+                                  index=tmp_csh_idx)
+            setattr(tmp_title, 'csh_rate', tmp_csh_rate)
+
+            tmp_ctrt_idx = self.idxsls[[x[0] for x in self.ctrt_scdd[i]]]
+            tmp_ctrt_rate = Series([x[1] for x in self.ctrt_scdd[i]],
+                                   index=tmp_ctrt_idx)
+            setattr(tmp_title, 'ctrt_rate', tmp_ctrt_rate)
+            
+            tmp_ctrt_plan = tmp_amt * tmp_ctrt_rate
+            setattr(tmp_title, 'ctrt_plan', tmp_ctrt_plan)
+            
+        self.ttl = Merge(self.dct)
+        for i, key in enumerate(self.title):
+            setattr(self.ttl, key, getattr(self, key))
+
+
+class Intlz_cost:
+    def __init__(self,
+                 index, # basic index class
+                 idxcst = None, # cost index class
+                 ):
+        # Input index
+        self.index = index
+        if idxcst == None:
+            idxcst = index
+        self.idxcst = idxcst
+        
+        self.title = []
+        
+        self.dct = {}
+        self._intlz()
+        
+    def __len__(self):
+        return len(title)
+    
+    def _intlz(self):
+        pass
+    
+    def inptcst(self,
+                title, # str
+                scddidx, # list
+                scddamt, # list
+                **kwargs):
+        if title not in self.title:
+            self.title.append(title)
+            tmp_acc = Account(self.index)
+            self.dct[title] = tmp_acc
+            setattr(self, title, tmp_acc)
+        
+        tmp_istnc = getattr(self, title)
+        tmp_istnc.addscdd(scddidx, scddamt)
+        
+        for key, val in kwargs.items():
+            setattr(tmp_istnc, key, val)
+            
+    @property
+    def ttl(self):
+        tmp_ttl = Merge(self.dct)
+        for i, key in enumerate(self.title):
+            setattr(tmp_ttl, key, getattr(self, key))
+        return tmp_ttl
+
 
 # receive sales amount
-class sls_mngmnt:
+class Mngmnt_sls:
     def __init__(self, idxno, sales):
         self.idxno = idxno
         self.sls = sales
@@ -37,7 +155,7 @@ class sls_mngmnt:
         
 
 # Calculate cash amount required and withdraw loan.
-class wtdrw_mngmnt:
+class Mngmnt_wtdrw:
     """
     PARAMETERS
     - idxno : index
@@ -97,7 +215,7 @@ class wtdrw_mngmnt:
 
 
 # Calculate cost amount
-class cst_mngmnt:
+class Mngmnt_cst:
     """
     PARAMETERS
     - idxno : index
@@ -164,7 +282,7 @@ class cst_mngmnt:
             
             
 # Calculate expected repayment of loan and repay loan.
-class repay_mngmnt:
+class Mngmnt_repay:
     """
     PARAMETERS
     - idxno

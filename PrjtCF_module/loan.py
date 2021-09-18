@@ -15,7 +15,7 @@ from . import genfunc
 from .index import Index, PrjtIndex
 from .account import Account, Merge
 
-__all__ = ['Loan']
+__all__ = ['Loan', 'Merge_loan', 'Intlz_loan']
 
 class Loan(object):
     """
@@ -49,7 +49,7 @@ class Loan(object):
     - set_repaid() : After check that notional amount is repaid, set is_repaid True.
     """
     def __init__(self,
-                 index = None, # basic index class
+                 index, # basic index class
                  idxfn = None, # financial index class
                  amt_ntnl = 0, # float
                  rate_fee = 0.0, # float
@@ -59,6 +59,9 @@ class Loan(object):
                  tag = None, # string tuple : ("tagA", "tagB")
                  note = "" # string
                  ):
+        if idxfn == None:
+            idxfn = index
+        
         # index 입력
         if isinstance(index, Index):
             self.cindex = index
@@ -78,8 +81,8 @@ class Loan(object):
         # 주요 변수 입력
         self.amt_ntnl = amt_ntnl
         self.rate_fee = rate_fee
-        self.IRcycle = IRcycle
         self.rate_IR = rate_IR
+        self.IRcycle = IRcycle
         self._rate_IR_cycle = rate_IR * self.IRcycle / 12
             
         # title 입력
@@ -203,3 +206,60 @@ class Merge_loan(Merge):
         tmp_dct = {key:val.IR for key, val in self.dct.items()}
         rslt_acc = Merge(tmp_dct)
         return rslt_acc
+        
+        
+class Intlz_loan:
+    def __init__(self,
+                 index, # basic index class
+                 idxfn = None, # financial index class
+                 title = [], # list, loan name
+                 amt_ntnl = [], # list/float, loan notional amount
+                 rate_fee = [], # list/float
+                 rate_IR = [], # list/float
+                 IRcycle = 1, # int or list / default 1, months
+                 tag = None, # string tuple : ("tagA", "tagB")
+                 note = "" # string
+                 ):
+        # index 입력
+        self.index = index
+        self.idxfn = idxfn        
+            
+        # 주요 변수 입력
+        self.title = title
+        self.len = len(title)
+        self.amt_ntnl = amt_ntnl
+        self.rate_fee = rate_fee
+        self.rate_IR = rate_IR
+        
+        if genfunc.is_iterable(IRcycle):
+            self.IRcycle = IRcycle
+        elif isinstance(IRcycle, int):
+            self.IRcycle = [IRcycle for _ in range(self.len)]
+        
+        self.tag = tag
+        self.note = note
+        
+        self.dct = {}
+        self._intlz()
+        
+    def __len__(self):
+        return self.len
+    
+    def _intlz(self):
+        for i in range(self.len):
+            tmpinstnc = Loan(index = self.index,
+                             idxfn = self.idxfn,
+                             amt_ntnl = self.amt_ntnl[i],
+                             rate_fee = self.rate_fee[i],
+                             rate_IR = self.rate_IR[i],
+                             IRcycle = self.IRcycle[i],
+                             title = self.title[i],
+                             tag = self.tag,
+                             note = self.note
+                             )
+            self.dct[self.title[i]] = tmpinstnc
+            setattr(self, self.title[i], tmpinstnc)
+        
+        self.ttl = Merge_loan(self.dct)
+        for i in range(self.len):
+            setattr(self.ttl, self.title[i], getattr(self, self.title[i]))
