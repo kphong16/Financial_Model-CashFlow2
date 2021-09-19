@@ -206,7 +206,11 @@ class Merge_loan(Merge):
         tmp_dct = {key:val.IR for key, val in self.dct.items()}
         rslt_acc = Merge(tmp_dct)
         return rslt_acc
-        
+    
+    @property
+    def is_repaid(self):
+        tmp_rslt = all([val.is_repaid for val in self.dct.values()])
+        return tmp_rslt
         
 class Intlz_loan:
     def __init__(self,

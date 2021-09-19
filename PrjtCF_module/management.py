@@ -7,7 +7,7 @@ from .genfunc import *
 from .index import *
 from .account import *
 
-__all__ = ['Intlz_sales_sellinlots', 'Intlz_cost', 
+__all__ = ['Intlz_sales_sellinlots', 'Intlz_costs', 'Intlz_accounts',
            'Mngmnt_sls', 'Mngmnt_wtdrw', 'Mngmnt_cst', 'Mngmnt_repay']
 
 
@@ -76,7 +76,7 @@ class Intlz_sales_sellinlots:
             setattr(self.ttl, key, getattr(self, key))
 
 
-class Intlz_cost:
+class Intlz_costs:
     def __init__(self,
                  index, # basic index class
                  idxcst = None, # cost index class
@@ -93,7 +93,7 @@ class Intlz_cost:
         self._intlz()
         
     def __len__(self):
-        return len(title)
+        return len(self.title)
     
     def _intlz(self):
         pass
@@ -123,6 +123,32 @@ class Intlz_cost:
         return tmp_ttl
 
 
+# Setting Accounts
+class Intlz_accounts:
+    def __init__(self, 
+                 index, # index
+                 title, # list/str
+                 ):
+        self.index = index
+        self.title = title
+        
+        self.dct = {}
+        self._intlz()
+
+    def __len__(self):
+        return len(self.title)
+        
+    def _intlz(self):
+        for i, title in enumerate(self.title):
+            tmp_acc = Account(self.index)
+            self.dct[title] = tmp_acc
+            setattr(self, title, tmp_acc)
+            
+        self.ttl = Merge(self.dct)
+        for i, title in enumerate(self.title):
+            setattr(self.ttl, title, getattr(self, title))
+        
+
 # receive sales amount
 class Mngmnt_sls:
     def __init__(self, idxno, sales):
@@ -133,15 +159,17 @@ class Mngmnt_sls:
         self.sls_amt = 0
         
     # Check sales plan and input sales data
-    def make_sls_plan(self):
+    def make_ctrt_plan(self):
         try:
             # check sales plan
-            sls_amt = self.sls.sls_plan.loc[self.idxno]
+            sls_amt = self.sls.ctrt_plan.loc[self.idxno]
             try:
                 # input sales amount on this index no.
+                self.sls.addscdd(self.idxno, sls_amt)
                 self.sls.addamt(self.idxno, sls_amt)
                 # input sales cash schedule on sales cash index.
-                self.sls.subscdd(self.sls.csh_idx, sls_amt * self.sls.csh_rate)
+                tmp_idx = [max(self.idxno, x) for x in self.sls.csh_idx]
+                self.sls.subscdd(tmp_idx, sls_amt * self.sls.csh_rate)
             except AttributeError as err:
                 print("AttributeError", err)
         except:
@@ -204,9 +232,11 @@ class Mngmnt_wtdrw:
         loan = loan_each
         if loan.is_wtdrbl:
             ntnl_sub_rsdl = loan.ntnl.sub_rsdl_cum[self.idxno] # 누적인출가능잔액
-            tmp_wtdrw = min(ntnl_sub_rsdl, self.rsdl_wtdrw)
+            tmp_wtdrw = limited(self.rsdl_wtdrw,
+                                upper=[ntnl_sub_rsdl], 
+                                lower=[0])
             # 누적인출가능잔액과 인출필요금액을 비교하여 적은 금액을 대입
-            
+    
             loan.ntnl.send(self.idxno, tmp_wtdrw, self.oprtg)
             # 추가 인출필요금액을 운영계좌로 이체(누적인출가능잔액 내에서)
             

@@ -33,3 +33,8 @@ def limited(val, upper=None, lower=None):
         else:
             tmp_val = max(tmp_val, lower)
     return tmp_val
+    
+    
+def rounding(val):
+    tmprslt = val.fillna(0).applymap(lambda x: f"{x:,.0f}")
+    return tmprslt
