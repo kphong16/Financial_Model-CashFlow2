@@ -90,6 +90,18 @@ class Index(object):
         
         return isyear & ismonth & isday
 
+    def locno(self, year=None, month=None, day=None):
+        """
+        Return index no. which data(year, month, day) is in
+        """
+        try:
+            tmpval = self.idxno[self.idxloc(year, month, day)]
+            if len(tmpval) == 1:
+                return int(tmpval)
+            else:
+                raise ValueError
+        except AttributeError as err:
+            print("AttributeError", err)
 
 class PrjtIndex(object):
     """
