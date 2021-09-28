@@ -76,4 +76,71 @@ class Intlz_accounts:
             
         self.ttl = Merge(self.dct)
         for no, accname in enumerate(self.accname):
-            setattr(self.ttl, accname, getattr(self, accname)
+            setattr(self.ttl, accname, getattr(self, accname))
+            
+            
+# Receive sales amount
+class Mngmnt_sls:
+    def __init__(self, idxno, sales):
+        self.idxno = idxno
+        self.sls = sales
+        
+    # Check sales plan and input sales data
+    def make_ctrt_plan(self):
+        try:
+            # check sales plan
+            sls_amt = self.sls.ctrt.amt.loc[self.idxno]
+            sls_odr = self.sls.ctrt.odr.loc[self.idxno]
+            try:
+                # input sales amount on this index no.
+                self.sls.addscdd(self.idxno, sls_amt)
+                self.sls.addamt(self.idxno, sls_amt)
+            
+                # input sales cash schedule on sales cash index.
+                sls_csh = self.sls.csh[sls_odr]
+                csh_idx = [max(self.idxno, x[0]) for x in sls_csh]
+                csh_amt = [sls_amt * x[1] for x in sls_csh]
+                self.sls.subscdd(csh_idx, csh_amt)
+            except AttributeError as err:
+                print("AttributeError", err)
+        except:
+            pass
+        
+    # Receive sales amount on sales account
+    def rcv_slsamt(self, acnt_sales):
+        sls_amt = self.sls.sub_rsdl_cum[self.idxno]
+        self.sls.send(self.idxno, sls_amt, acnt_sales)
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            

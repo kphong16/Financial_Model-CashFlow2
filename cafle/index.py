@@ -90,18 +90,31 @@ class Index(object):
         
         return isyear & ismonth & isday
 
-    def locno(self, year=None, month=None, day=None):
+    def locno(self, year, month=None, day=None):
         """
         Return index no. which data(year, month, day) is in
         """
+        if isinstance(year, int):
+            tmp_loc = self.idxloc(year, month, day)
+        elif isinstance(year, date):
+            tmp_loc = self.index == year
+        
         try:
-            tmpval = self.idxno[self.idxloc(year, month, day)]
+            tmpval = self.idxno[tmp_loc]
             if len(tmpval) == 1:
                 return int(tmpval)
             else:
                 raise ValueError
         except AttributeError as err:
             print("AttributeError", err)
+            
+    def locval(self, year=None, month=None, day=None):
+        """
+        Return index val. which data(year, month, day) is in
+        """
+        tmpno = self.locno(year, month, day)
+        return self[tmpno]
+
 
 class PrjtIndex(object):
     """
@@ -199,6 +212,12 @@ class PrjtIndex(object):
     def idxloc(self, year=None, month=None, day=None):
         return self._prjt.idxloc(year, month, day)
 
+    def locno(self, year, month=None, day=None):
+        return self._prjt.locno(year, month, day)
+        
+    def locval(self, year=None, month=None, day=None):
+        return self._prjt.locval(year, month, day)
+        
 def _getblnloc(array, val):
     if val == None:
         return [True]
