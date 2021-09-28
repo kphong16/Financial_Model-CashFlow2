@@ -52,6 +52,7 @@ class Loan(object):
                  index, # basic index class
                  idxfn = None, # financial index class
                  amt_ntnl = 0, # float
+                 amt_ntnl_once = None,
                  rate_fee = 0.0, # float
                  rate_IR = 0.0, # float
                  IRcycle = 1, # int, months
@@ -80,6 +81,8 @@ class Loan(object):
             
         # 주요 변수 입력
         self.amt_ntnl = amt_ntnl
+        if amt_ntnl_once:
+            self.amt_ntnl_once = amt_ntnl_once
         self.rate_fee = rate_fee
         self.rate_IR = rate_IR
         self.IRcycle = IRcycle
@@ -114,6 +117,13 @@ class Loan(object):
         self.dct = {}
         self._intlz()
         self.dctmrg = Merge(self.dct)
+    
+    def __getattr__(self, attr):
+        """
+        기존에 정의되어 있지 않은 속성이 입력될 경우, Account 객체를 조회하여 속성
+        존재 여부를 확인함.
+        """
+        return [dctval.__dict__[attr] for dctval in self.dct.values()]
         
     def _intlz(self):
         # 초기화 함수 실행    
@@ -124,13 +134,11 @@ class Loan(object):
         
         self.fee.rate = self.rate_fee
         self.fee.amt = self.ntnl.amt * self.fee.rate
-        self.fee.addscdd(self.cidxfn.index[0], self.fee.amt)
         self.dct['fee'] = self.fee
         
         self.IR.rate = self.rate_IR
         self.IR.rate_cycle = self._rate_IR_cycle
         self.IR.amt_cycle = self.ntnl.amt * self.IR.rate_cycle
-        self.IR.addscdd(self.cidxfn.index[1:], np.ones(len(self.cidxfn)) * self.IR.amt_cycle)
         self.dct['IR'] = self.IR
         
     @property
@@ -177,7 +185,7 @@ class Loan(object):
     def set_repaid(self, date):
         if self.is_wtdrbl == False:
             return
-        if self.ntnl.bal_end[date] < 0:
+        if -self.ntnl.bal_end[date] > 0:
             return
         if self.ntnl.sub_rsdl_cum[date] > 0:
             return
@@ -218,6 +226,7 @@ class Intlz_loan:
                  idxfn = None, # financial index class
                  title = [], # list, loan name
                  amt_ntnl = [], # list/float, loan notional amount
+                 amt_ntnl_once = None,
                  rate_fee = [], # list/float
                  rate_IR = [], # list/float
                  IRcycle = 1, # int or list / default 1, months
@@ -232,6 +241,7 @@ class Intlz_loan:
         self.title = title
         self.len = len(title)
         self.amt_ntnl = amt_ntnl
+        self.amt_ntnl_once = amt_ntnl_once
         self.rate_fee = rate_fee
         self.rate_IR = rate_IR
         
@@ -254,6 +264,7 @@ class Intlz_loan:
             tmpinstnc = Loan(index = self.index,
                              idxfn = self.idxfn,
                              amt_ntnl = self.amt_ntnl[i],
+                             amt_ntnl_once = self.amt_ntnl_once[i],
                              rate_fee = self.rate_fee[i],
                              rate_IR = self.rate_IR[i],
                              IRcycle = self.IRcycle[i],

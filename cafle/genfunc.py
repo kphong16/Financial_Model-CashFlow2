@@ -44,3 +44,13 @@ def rounding(df):
             else:
                 rslt_df[key] = rslt_df[key].fillna(0).apply(lambda x: f"{x:,.0f}")
     return rslt_df
+    
+    
+def log10(val):
+    tmpval = 0
+    while True:
+        val = val / 10
+        if val > 0.9:
+            tmpval += 1
+        else:
+            return tmpval
