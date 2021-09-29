@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 from pandas import Series, DataFrame
 from pandas.tseries.offsets import Day, MonthEnd
 
@@ -52,6 +53,56 @@ class Intlz_sales_sellinlots:
         for no, prdt in enumerate(self.prdtlst):
             setattr(self.ttl, prdt, self.dct[prdt])
             
+         
+# Intializing Costs
+class Intlz_costs:
+    def __init__(self,
+                 index, # basic index class
+                 idxcst = None, # cost index class
+                 ):
+        # Input index
+        self.index = index
+        if idxcst == None:
+            idxcst = index
+        self.idxcst = idxcst
+        
+        self.title = []
+        
+        self.dct = {}
+        self._intlz()
+    
+    def __len__(self):
+        return len(self.title)
+        
+    def _intlz(self):
+        pass
+    
+    def inptcst(self,
+                title, # str
+                scddidx, # list
+                scddamt, # list
+                **kwargs):
+        if title not in self.title:
+            self.title.append(title)
+            tmp_acc = Account(self.index)
+            self.dct[title] = tmp_acc
+            setattr(self, title, tmp_acc)
+        
+        tmp_istnc = getattr(self, title)
+        tmp_istnc.addscdd(scddidx, scddamt)
+        
+        setattr(tmp_istnc, 'amt', tmp_istnc.add_scdd[:].sum())
+        
+        for key, val in kwargs.items():
+            setattr(tmp_istnc, key, val)
+    
+    @property
+    def ttl(self):
+        tmp_ttl = Merge(self.dct)
+        for i, key in enumerate(self.title):
+            setattr(tmp_ttl, key, getattr(self, key))
+        return tmp_ttl
+         
             
 # Setting Accounts
 class Intlz_accounts:
@@ -110,7 +161,35 @@ class Mngmnt_sls:
     def rcv_slsamt(self, acnt_sales):
         sls_amt = self.sls.sub_rsdl_cum[self.idxno]
         self.sls.send(self.idxno, sls_amt, acnt_sales)
+
+
+# Manage cost amount
+class Mngmnt_cst:
+    def __init__(self, idxno, cost):
+        self.idxno = idxno
+        self.cost = cost
+    
+    def _set_addscdd(self):
+        pass
+    
+    @property
+    def cst_oprtg(self):
+        ttlsum = 0
+        for cst_name, cst_acc in self.cost.dct.items():
+            amt_scdd = cst_acc.add_scdd[self.idxno]
+            ttlsum += amt_scdd
+        return ttlsum
         
+    def pay_oprtgcst(self, oprtg):
+        """운영계좌에서 운영비용(operating cost) 지출"""
+        for cst_name, cst_acc in self.cost.dct.items():
+            amt_scdd = cst_acc.add_scdd[self.idxno]
+            oprtg.send(self.idxno, amt_scdd, cst_acc)
+            
+    def cal_slsfee(self, sls_amt_ctrt):
+        slsfee_amt = sls_amt_ctrt * self.cost.sales_fee.rate
+        self.cost.sales_fee.addscdd(self.idxno, slsfee_amt)
+
         
 # Calculate financial cost amount
 class Mngmnt_fncl:
@@ -169,19 +248,27 @@ class Mngmnt_wtdrw:
         bal_oprtg = self.oprtg.bal_end[self.idxno]
         
         amt_rqrd = max(ttl_expense - bal_oprtg, 0)
-        amt_rqrd = round(amt_rqrd, -log10(minunit))
+        amt_rqrd = round_up(amt_rqrd, -log10(minunit))
         # 지출필요금액에 대하여 운영계좌 잔액을 초과하는 금액 계산
         
         self.rqrd_wtdrw = amt_rqrd
             
-    def wtdrw_eqty(self, eqty):
+    def wtdrw_eqty(self, eqty, amt_once=None):
         """equity instance에 대하여 idxno에 대응하는 인출예정금액(sub_scdd)을
         조회하여 운영계좌로 이체"""
         if all([eqty.is_wtdrbl, not eqty.is_repaid]):        
             amt_eqty = eqty.ntnl.sub_scdd[self.idxno]
-            tmp_wtdrw = limited(self.rqrd_wtdrw,
+            if amt_once:
+                tmp_wtdrw = amt_once
+            else:
+                tmp_wtdrw = self.rqrd_wtdrw
+            tmp_wtdrw = limited(tmp_wtdrw,
                                 upper=[amt_eqty],
                                 lower=[0])
+            eqty.ntnl.send(self.idxno, tmp_wtdrw, self.oprtg)
+            # 인출금액을 equity 계좌에서 oprtg 계좌로 이체
+            self.amt_wtdrw += tmp_wtdrw
+            self.rqrd_wtdrw -= tmp_wtdrw
     
     def wtdrw_loan(self, loan_each, amt_once=None):
         """loan instance에 대하여 idxno에 대응하는 누적인출가능잔액 확인,

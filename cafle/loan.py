@@ -158,9 +158,13 @@ class Loan(object):
     def is_wtdrbl(self, value):
         self._is_wtdrbl = value
     
-    def set_wtdrbl_intldate(self, date):
+    def set_wtdrbl_intldate(self, date, critdate=None):
         """If the date is an initial date, then set is_wtdrbl True"""
-        if date == self.idxfn[0]:
+        if critdate:
+            tmp_crit = critdate
+        else:
+            tmp_crit = self.idxfn[0]
+        if date == tmp_crit:
             self.is_wtdrbl = True
     
     def setback_wtdrbl_mtrt(self, date):
